@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Buscador de Impresoras</title>
+  <meta name="description" content="Buscá un juzgado u oficina y mirá qué impresoras tiene.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="copia" content="celu">
+  <meta name="version" content="20261008-115656">
+  <!-- Instalada como app en el celu (el manifiesto lo agrega js/celu.js solo en la copia publicada) -->
+  <meta name="theme-color" content="#eef3fb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#060b17" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Impresoras">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2'/%3E%3Cpath d='M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6'/%3E%3Crect x='6' y='14' width='12' height='8' rx='1'/%3E%3C/svg%3E">
+  <script>
+    /* Aplica el tema antes de pintar para evitar el "flash" blanco. */
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('impresoras.tema'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <!-- Sprite de íconos (estilo Lucide, trazo 2px). Se usan con <svg><use href="#i-nombre"/></svg> -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-printer" viewBox="0 0 24 24"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-search-x" viewBox="0 0 24 24"><path d="m13.5 8.5-5 5"/><path d="m8.5 8.5 5 5"/><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-landmark" viewBox="0 0 24 24"><path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M12 2 20 7H4z"/></symbol>
+    <symbol id="i-building" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></symbol>
+    <symbol id="i-network" viewBox="0 0 24 24"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-square-check" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-barcode" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 7v10"/><path d="M12 7v10"/><path d="M17 7v10"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.59 2.59A2 2 0 0 0 11.17 2H4a2 2 0 0 0-2 2v7.17a2 2 0 0 0 .59 1.42l8.7 8.7a2.43 2.43 0 0 0 3.42 0l6.58-6.58a2.43 2.43 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r="1"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0l1.58 6.14a2 2 0 0 0 1.44 1.44l6.14 1.58a.5.5 0 0 1 0 .96l-6.14 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-clipboard" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M16 4h2a2 2 0 0 1 2 2v4"/><path d="M21 14H11"/><path d="m15 10-4 4 4 4"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+    <symbol id="i-folder-check" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="m9 13 2 2 4-4"/></symbol>
+    <symbol id="i-loader" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></symbol>
+    <symbol id="i-unlink" viewBox="0 0 24 24"><path d="m18.84 12.25 1.72-1.71h-.02a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71"/><path d="m8 2v3"/><path d="M2 8h3"/><path d="M16 22v-3"/><path d="M22 16h-3"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></symbol>
+    <symbol id="i-server" viewBox="0 0 24 24"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6 6h.01"/><path d="M6 18h.01"/></symbol>
+    <symbol id="i-hash" viewBox="0 0 24 24"><path d="M4 9h16"/><path d="M4 15h16"/><path d="M10 3 8 21"/><path d="M16 3l-2 18"/></symbol>
+    <symbol id="i-smartphone" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></symbol>
+  </svg>
+
+  <!-- Fondo animado -->
+  <div class="aurora" aria-hidden="true">
+    <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span>
+    <span class="dots"></span>
+  </div>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#" id="brandLink" aria-label="Inicio">
+        <span class="brand-logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" class="logo-svg">
+            <defs><clipPath id="clipSalida"><rect x="0" y="14" width="24" height="10"/></clipPath></defs>
+            <path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <g clip-path="url(#clipSalida)"><g class="logo-hoja"><rect x="6" y="14" width="12" height="8" rx="1"/><path d="M9 17.5h6M9 20h4"/></g></g>
+          </svg>
+        </span>
+        <span class="brand-text">
+          <strong>Impresoras</strong>
+          <small>Juzgados y oficinas</small>
+        </span>
+      </a>
+
+      <div class="stats" id="stats" aria-label="Totales">
+        <span class="stat"><svg class="ico"><use href="#i-landmark"/></svg><b id="statOficinas">0</b><span>oficinas</span></span>
+        <span class="stat-sep" aria-hidden="true"></span>
+        <span class="stat"><svg class="ico"><use href="#i-printer"/></svg><b id="statImpresoras">0</b><span>impresoras</span></span>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="pill-carpeta" id="btnCarpeta" type="button" hidden></button>
+        <button class="btn btn-primary" id="btnAgregar" type="button" aria-label="Añadir oficina" title="Añadir oficina e impresoras">
+          <svg class="ico"><use href="#i-plus"/></svg><span class="hide-sm">Añadir oficina</span>
+        </button>
+
+        <div class="menu-wrap">
+          <button class="icon-btn" id="btnMenu" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menuDatos" title="Más opciones">
+            <svg class="ico"><use href="#i-more"/></svg>
+            <span class="badge-dot" id="menuDot" hidden></span>
+          </button>
+          <div class="menu" id="menuDatos" role="menu" hidden>
+            <p class="menu-note" id="menuNota" hidden></p>
+            <button class="menu-item" role="menuitem" type="button" data-accion="pegar"><svg class="ico"><use href="#i-clipboard"/></svg>Pegar datos de impresoras…</button>
+            <div class="menu-sep" role="separator"></div>
+            <button class="menu-item solo-celu" id="miCeluConectar" role="menuitem" type="button" data-accion="celu-conectar"><svg class="ico"><use href="#i-plug"/></svg>Conectar con la PC…</button>
+            <button class="menu-item solo-celu" id="miCeluBajar" role="menuitem" type="button" data-accion="celu-bajar" hidden><svg class="ico"><use href="#i-rotate"/></svg>Traer lo último de la PC</button>
+            <button class="menu-item solo-celu" role="menuitem" type="button" data-accion="celu-actualizar"><svg class="ico"><use href="#i-download"/></svg>Cargar datos desde un archivo…</button>
+            <button class="menu-item solo-celu" role="menuitem" type="button" data-accion="celu-pasar"><svg class="ico"><use href="#i-upload"/></svg>Pasar cambios a la PC</button>
+            <button class="menu-item solo-celu" id="miInstalar" role="menuitem" type="button" data-accion="instalar" hidden><svg class="ico"><use href="#i-smartphone"/></svg>Instalar como app</button>
+            <button class="menu-item solo-celu" id="miCeluDesconectar" role="menuitem" type="button" data-accion="celu-desconectar" hidden><svg class="ico"><use href="#i-unlink"/></svg>Desconectar de la PC</button>
+            <button class="menu-item" id="miConectar" role="menuitem" type="button" data-accion="conectar" hidden><svg class="ico"><use href="#i-folder"/></svg>Conectar carpeta compartida…</button>
+            <button class="menu-item" id="miGuardar" role="menuitem" type="button" data-accion="guardar-ahora" hidden><svg class="ico"><use href="#i-save"/></svg>Guardar ahora en datos.json</button>
+            <button class="menu-item" id="miDesconectar" role="menuitem" type="button" data-accion="desconectar" hidden><svg class="ico"><use href="#i-unlink"/></svg>Desconectar carpeta</button>
+            <div class="menu-sep" role="separator"></div>
+            <button class="menu-item solo-pc" id="miCelu" role="menuitem" type="button" data-accion="ver-celu"><svg class="ico"><use href="#i-smartphone"/></svg><span>Ver en el celu…</span></button>
+            <button class="menu-item solo-pc" role="menuitem" type="button" data-accion="pc-al-celu"><svg class="ico"><use href="#i-download"/></svg>Pasar datos al celu (archivo)</button>
+            <button class="menu-item solo-pc" role="menuitem" type="button" data-accion="pc-traer"><svg class="ico"><use href="#i-upload"/></svg>Traer cambios del celu…</button>
+            <div class="menu-sep solo-pc" role="separator"></div>
+            <button class="menu-item solo-pc" role="menuitem" type="button" data-accion="exportar"><svg class="ico"><use href="#i-download"/></svg>Exportar copia (.json)</button>
+            <button class="menu-item solo-pc" role="menuitem" type="button" data-accion="importar"><svg class="ico"><use href="#i-upload"/></svg>Importar copia…</button>
+            <button class="menu-item solo-pc" role="menuitem" type="button" data-accion="descargar-datos"><svg class="ico"><use href="#i-download"/></svg>Descargar datos.json</button>
+            <div class="menu-sep solo-pc" role="separator"></div>
+            <button class="menu-item danger" role="menuitem" type="button" data-accion="restablecer"><svg class="ico"><use href="#i-rotate"/></svg>Descartar cambios locales</button>
+            <p class="menu-version solo-celu" id="menuVersion"></p>
+          </div>
+          <input type="file" id="inputImportar" accept=".json,application/json" hidden>
+          <input type="file" id="inputCelu" hidden><!-- sin "accept": en el celu el selector oculta los .txt/.json según el sistema -->
+        </div>
+
+        <button class="icon-btn theme-toggle" id="btnTema" type="button" aria-label="Cambiar tema" title="Cambiar tema">
+          <svg class="ico ico-sun"><use href="#i-sun"/></svg>
+          <svg class="ico ico-moon"><use href="#i-moon"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <span class="eyebrow"><svg class="ico"><use href="#i-printer"/></svg>Buscador de impresoras</span>
+      <h1 id="titulo">Encontrá las impresoras de cada edificio</h1>
+      <p class="lead">Escribí el nombre o número del juzgado u oficina. También podés buscar por modelo, IP o número de serie.</p>
+    </section>
+
+    <!-- Fuera del hero a propósito: en el celu queda pegado arriba al bajar (sticky solo se mueve dentro de su padre) -->
+    <div class="search-wrap" id="searchWrap">
+      <div class="search" id="searchBox">
+        <svg class="ico search-ico"><use href="#i-search"/></svg>
+        <input id="q" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" spellcheck="false"
+               placeholder="Ej: Juzgado 30, P 311, 10.0.12…" aria-label="Buscar juzgado u oficina" aria-describedby="resumen">
+        <button class="search-clear" id="btnLimpiar" type="button" aria-label="Borrar búsqueda" hidden>
+          <svg class="ico"><use href="#i-x"/></svg>
+        </button>
+        <kbd class="search-kbd" aria-hidden="true">Ctrl B</kbd>
+      </div>
+    </div>
+
+    <section class="hero-pie">
+      <div class="filtros" id="filtrosEdif" role="group" aria-label="Filtrar por edificio" hidden></div>
+      <div class="filtros" id="filtros" role="group" aria-label="Filtrar por piso" hidden></div>
+      <div class="resumen-fila">
+        <p class="resumen" id="resumen" aria-live="polite"></p>
+        <button class="btn-seleccionar" id="btnPegar" type="button" title="Pegar texto copiado (PDF, mail, tabla…) y cargar varias impresoras de una vez">
+          <svg class="ico"><use href="#i-clipboard"/></svg><span>Pegar datos</span>
+        </button>
+        <button class="btn-seleccionar" id="btnSeleccionar" type="button" aria-pressed="false" title="Elegir varias oficinas para asignarles un edificio de una vez" hidden>
+          <svg class="ico"><use href="#i-square-check"/></svg><span>Seleccionar varias</span>
+        </button>
+      </div>
+      <p class="aviso-ejemplo" id="avisoEjemplo" hidden><svg class="ico"><use href="#i-info"/></svg><span>Estás viendo <b>datos de ejemplo</b>. Se reemplazan al cargar las impresoras reales en <code>datos.json</code>.</span></p>
+    </section>
+
+    <section class="results" id="results" aria-label="Resultados"></section>
+    <div class="empty" id="empty" hidden></div>
+  </main>
+
+  <footer class="footer">
+    <span id="footerInfo"></span>
+    <span class="footer-legend"><span class="pill pill-new">Nueva</span> / <span class="pill pill-mod">Editada</span> = cambios guardados solo en este navegador</span>
+  </footer>
+
+  <!-- Modal: añadir / editar oficina -->
+  <dialog class="modal" id="modalOficina" aria-labelledby="modalTitulo">
+    <form class="modal-card" id="formOficina" novalidate>
+      <header class="modal-head">
+        <span class="modal-ico"><svg class="ico"><use href="#i-building"/></svg></span>
+        <div>
+          <h2 id="modalTitulo">Añadir oficina</h2>
+          <p id="modalSub">Cargá el juzgado u oficina y sus impresoras.</p>
+        </div>
+        <button class="icon-btn" type="button" data-cerrar aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button>
+      </header>
+
+      <div class="modal-body">
+        <div class="field">
+          <label for="fNombre">Nombre de la oficina / juzgado <span class="req">*</span></label>
+          <input id="fNombre" name="nombre" type="text" autocomplete="off" placeholder="Ej: Juzgado en lo Penal, Contravencional y de Faltas N° 5">
+          <p class="hint" id="hintNombre" hidden></p>
+          <p class="error" id="errNombre" hidden></p>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="fEdificio">Edificio <span class="opt">(opcional)</span></label>
+            <input id="fEdificio" name="edificio" type="text" autocomplete="off" list="edificios" placeholder="Nombre o dirección del edificio">
+          </div>
+          <div class="field">
+            <label for="fUbicacion">Piso / ubicación <span class="opt">(opcional)</span></label>
+            <input id="fUbicacion" name="ubicacion" type="text" autocomplete="off" placeholder="Ej: Piso 7">
+          </div>
+        </div>
+        <div class="field">
+          <label for="fAlias">Otros nombres para buscarla <span class="opt">(opcional)</span></label>
+          <input id="fAlias" name="alias" type="text" autocomplete="off" placeholder="Ej: PCyF 5, Penal 5">
+        </div>
+
+        <div class="printers-head">
+          <h3><svg class="ico"><use href="#i-printer"/></svg>Impresoras <span class="count-pill" id="fCantidad">0</span></h3>
+        </div>
+        <div class="printer-forms" id="printerForms"></div>
+        <button class="btn btn-dashed" type="button" id="btnOtraImpresora">
+          <svg class="ico"><use href="#i-plus"/></svg>Agregar impresora
+        </button>
+      </div>
+
+      <footer class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-cerrar>Cancelar</button>
+        <button class="btn btn-primary" type="submit" title="Guardar (Ctrl+Enter)"><svg class="ico"><use href="#i-save"/></svg>Guardar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Modal de confirmación -->
+  <dialog class="modal modal-sm" id="modalConfirmar" aria-labelledby="confTitulo">
+    <div class="modal-card">
+      <div class="confirm-body">
+        <span class="confirm-ico"><svg class="ico"><use href="#i-alert"/></svg></span>
+        <h2 id="confTitulo">¿Seguro?</h2>
+        <p id="confTexto"></p>
+      </div>
+      <footer class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-resp="no">Cancelar</button>
+        <button class="btn btn-danger" type="button" data-resp="si" id="confOk">Eliminar</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <!-- Barra de "Seleccionar varias": cuántas hay elegidas y qué hacer con ellas -->
+  <div class="barra-sel" id="barraSel" role="toolbar" aria-label="Oficinas seleccionadas" hidden>
+    <span class="bs-cuenta" id="bsCuenta" aria-live="polite"></span>
+    <div class="bs-acciones">
+      <button class="bs-btn" type="button" data-bs="todas" aria-label="Elegir todas las visibles">Todas<span class="hide-sm"> las visibles</span></button>
+      <button class="bs-btn" type="button" data-bs="ninguna">Ninguna</button>
+      <button class="btn btn-primary bs-asignar" type="button" data-bs="edificio" disabled><svg class="ico"><use href="#i-building"/></svg>Asignar edificio…</button>
+    </div>
+    <button class="icon-btn bs-salir" type="button" data-bs="salir" aria-label="Terminar la selección" title="Terminar la selección (Esc)"><svg class="ico"><use href="#i-x"/></svg></button>
+  </div>
+
+  <!-- Modal: asignar (o quitar) el edificio a las oficinas seleccionadas -->
+  <dialog class="modal modal-sm" id="modalEdificio" aria-labelledby="edifTitulo">
+    <form class="modal-card" id="formEdificio" novalidate>
+      <div class="confirm-body">
+        <span class="confirm-ico acento"><svg class="ico"><use href="#i-building"/></svg></span>
+        <h2 id="edifTitulo">Asignar edificio</h2>
+        <p id="edifTexto"></p>
+        <div class="field">
+          <label for="fEdificioVarias">Edificio</label>
+          <input id="fEdificioVarias" type="text" autocomplete="off" list="edificios" placeholder="Nombre o dirección del edificio">
+          <p class="nota">Si lo dejás vacío, se les quita el edificio.</p>
+        </div>
+      </div>
+      <footer class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-cerrar>Cancelar</button>
+        <button class="btn btn-primary" type="submit" id="edifOk" title="Asignar (Ctrl+Enter)">Asignar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Modal: pegar datos de impresoras (texto copiado de un PDF, mail, Word, tabla…) -->
+  <dialog class="modal modal-lg" id="modalPegar" aria-labelledby="pegarTitulo">
+    <form class="modal-card" id="formPegar" novalidate>
+      <header class="modal-head">
+        <span class="modal-ico"><svg class="ico"><use href="#i-clipboard"/></svg></span>
+        <div>
+          <h2 id="pegarTitulo">Pegar datos de impresoras</h2>
+          <p>Copiá el texto de donde lo tengas (PDF, mail, Word, una tabla) y pegalo acá: las impresoras se arman solas.</p>
+        </div>
+        <button class="icon-btn" type="button" data-cerrar aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button>
+      </header>
+      <div class="modal-body">
+        <div class="field">
+          <label for="pegarTexto">Texto copiado</label>
+          <div class="pg-cuadros" id="pegarCuadros"></div>
+          <button class="btn btn-dashed pg-otro" type="button" id="pegarOtro" title="Otro cuadro para pegar los datos de otra impresora">
+            <svg class="ico"><use href="#i-plus"/></svg>Otro cuadro
+          </button>
+          <p class="nota">Pegá los datos así como estén, en uno o en varios renglones: se reconocen IP, MAC, N° de serie, modelo, host, conexión, el juzgado u oficina y el piso. Para otra impresora podés usar <b>Otro cuadro</b>: lo de cada cuadro no se mezcla con lo de los demás.</p>
+        </div>
+        <div id="pegarResultado" aria-live="polite"></div>
+      </div>
+      <footer class="modal-foot">
+        <span class="pegar-cuenta" id="pegarCuenta"></span>
+        <button class="btn btn-ghost" type="button" data-cerrar>Cancelar</button>
+        <button class="btn btn-primary" type="submit" id="pegarOk" title="Cargar (Ctrl+Enter)" disabled>Cargar</button>
+      </footer>
+    </form>
+  </dialog>
+  <datalist id="oficinasPegar"></datalist>
+
+  <!-- Modal: ver las impresoras en el celu (PC) / conectar con la PC (celu). El contenido lo arma js/sync.js -->
+  <dialog class="modal modal-sync" id="modalSync" aria-labelledby="syncTitulo">
+    <div class="modal-card"></div>
+  </dialog>
+
+  <datalist id="edificios"></datalist>   <!-- se llena con los edificios ya cargados al abrir el formulario -->
+  <datalist id="conexiones">
+    <option value="Red"><option value="USB"><option value="Wi-Fi">
+  </datalist>
+  <datalist id="estados">
+    <option value="En uso"><option value="Sin uso"><option value="Fuera de servicio"><option value="En reparación">
+  </datalist>
+
+  <!-- Volver arriba: aparece al llegar al final de la página -->
+  <button class="subir" id="btnSubir" type="button" aria-label="Volver arriba" title="Volver arriba" tabindex="-1" aria-hidden="true">
+    <svg class="ico"><use href="#i-arrow-up"/></svg>
+  </button>
+
+  <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+  <script src="js/busqueda.js"></script>
+  <script src="js/almacen.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/formulario.js"></script>
+  <script src="js/pegar.js"></script>
+  <script src="js/titulo.js"></script>
+  <script src="js/carpeta.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/celu.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
